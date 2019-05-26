@@ -1,12 +1,5 @@
-import { useEffect, useReducer, useState, Reducer, Dispatch } from 'react'
+import { useEffect, useState } from 'react'
 import createUseContext from 'constate'
-
-export type CartAction =
-  | { type: 'fetch' }
-  | { type: 'set'; payload: Cart }
-  | { type: 'error'; payload: Error }
-
-export type CartReducer = Reducer<CartState, CartAction>
 
 export interface Cart {}
 
@@ -15,28 +8,16 @@ export interface CartState {
   error: Error | null
   fetching: boolean
 }
-export type CartContextValue = [CartState, Dispatch<CartAction>]
 
-export const initialCartState = { cart: null, error: null, fetching: false }
-
-export const cartReducer: CartReducer = (state, action) => {
-  switch (action.type) {
-    case 'fetch':
-      return { ...state, fetching: true }
-    case 'set':
-      return { ...initialCartState, cart: action.payload }
-    case 'error':
-      return { ...state, error: action.payload, fetching: false }
-  }
-}
+export const initialCartState: CartState = { cart: null, error: null, fetching: false }
 
 export const useCart = () => {
-  const [cartState, dispatch] = useReducer(cartReducer, initialCartState)
-  const [shouldFetch, setShouldFetch] = useState()
+  const [cartState, setCartState] = useState<CartState>(initialCartState)
+  const [shouldFetch, setShouldFetch] = useState(false)
 
   useEffect(() => {
     if (!cartState.cart) {
-      dispatch({ type: 'fetch' })
+      setCartState({ ...cartState, fetching: true })
       setShouldFetch(true)
     }
     // eslint-disable-next-line
@@ -49,13 +30,13 @@ export const useCart = () => {
       fetch('http://www.mocky.io/v2/5cea8301330000501c7c383f')
         .then(response => {
           if (!response.ok) {
-            throw new Error('Bad response from server')
+            throw new Error(`Bad response from server ${response.status}`)
           }
 
           return response.json()
         })
-        .then((json: CartState) => dispatch({ type: 'set', payload: json }))
-        .catch((error: Error) => dispatch({ type: 'error', payload: error }))
+        .then((json: CartState) => setCartState({ cart: json, error: null, fetching: false }))
+        .catch((error: Error) => setCartState({ error, cart: null, fetching: false }))
     }
   }, [shouldFetch])
 
